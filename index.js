@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const unzip = require('unzip');
+const zlib = require('zlib');
 const app = express();
 
 const storage = multer.diskStorage({
@@ -15,7 +16,7 @@ const storage = multer.diskStorage({
 });
 const imageUploader = multer({ storage: storage })
 
-app.use('/se', express.static(path.join(__dirname, 'lib', 'synapeditor')));
+app.use('/se', express.static(path.join(__dirname, 'lib')));
 app.use('/res', express.static(path.join(__dirname, 'res')));
 
 app.get('/', (req, res) => {
@@ -32,8 +33,45 @@ app.post('/uploadImage', imageUploader.single('imageFile'), (req, res) => {
     });
 });
 
-fs.createReadStream(path.join(__dirname, 'res', 'test1.ndoc'))
-  .pipe(unzip.Extract({path: path.join(__dirname, 'test')})).on('error', () => {
-    console.log('[controller.js] Successful Unzip!');
+app.get('/load', (req, res) => {
+    let serializedData = [];
+    let rs = fs.createReadStream(path.join(__dirname, 'res', 'test1.ndoc'));
+    let ws = fs.createWriteStream(path.join(__dirname, 'tmp', 'test1.zip'));
+
+    rs.on('data', (data) => {
+        const magicPos = data[2];
+        const magicNum = data[magicPos];
+        console.log('data : ', data);
+        console.log('magic pos : ', magicPos);
+        console.log('magic num : ', magicNum);
+        data[0] = 'P'.charCodeAt();
+        data[1] = 'K'.charCodeAt();
+        data[2] = 0x03;
+        data[3] = 0x04;
+
+        // for(let i = 0; i < 60; i++) {
+        //     const index = i + 4;
+        //     data[index] = data[index] ^ magicNum;
+        // }
+
+        console.log('data after : ', data);
+        ws.write(data);
+        ws.end();
+    });
+
+    ws.on('close', () => {
+        fs.createReadStream(path.join(__dirname, 'tmp', 'test1.zip'))
+          .pipe(unzip.Extract({path: path.join(__dirname, 'tmp')})).on('close', () => {
+            fs.createReadStream(path.join(__dirname, 'tmp', 'document.word.pb'), {start: 16})
+              .pipe(zlib.createUnzip())
+              .on('data', (data) => {
+                for (let i = 0, len = data.length; i < len; i++) {
+                    serializedData.push(data[i] & 0xFF);
+                }
+            }).on('close', () => {
+                res.json({serializedData: serializedData});
+                res.end();
+            });
+        });
+    });
 });
-;
