@@ -5,6 +5,8 @@ const fs = require('fs');
 const unzip = require('unzip');
 const zlib = require('zlib');
 const app = express();
+const childProcess = require('child_process');
+const port = 8686;
 
 const storage = multer.diskStorage({
     destination: function (req, file, callback) {
@@ -23,14 +25,18 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(8080, () => {
-    console.log('editor-server start at localhost:8080');
+app.listen(port, () => {
+    console.log(`editor-server start at localhost:${port}`);
 });
 
 app.post('/uploadImage', imageUploader.single('imageFile'), (req, res) => {
     res.json({
         uploadPath: path.join('res', req.file.filename)
     });
+});
+
+app.get('/import', (req, res) => {
+    childProcess.exec('');
 });
 
 app.get('/load', (req, res) => {
@@ -41,20 +47,16 @@ app.get('/load', (req, res) => {
     rs.on('data', (data) => {
         const magicPos = data[2];
         const magicNum = data[magicPos];
-        console.log('data : ', data);
-        console.log('magic pos : ', magicPos);
-        console.log('magic num : ', magicNum);
         data[0] = 'P'.charCodeAt();
         data[1] = 'K'.charCodeAt();
         data[2] = 0x03;
         data[3] = 0x04;
 
-        // for(let i = 0; i < 60; i++) {
-        //     const index = i + 4;
-        //     data[index] = data[index] ^ magicNum;
-        // }
+        for(let i = 0; i < 60; i++) {
+            const index = i + 4;
+            data[index] = data[index] ^ magicNum;
+        }
 
-        console.log('data after : ', data);
         ws.write(data);
         ws.end();
     });
