@@ -1,3 +1,4 @@
+const request = require('request');
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -16,7 +17,7 @@ const storage = multer.diskStorage({
         callback(null, file.originalname) // 콜백함수를 통해 전송된 파일 이름 설정
     }
 });
-const imageUploader = multer({ storage: storage })
+const uploader = multer({ storage: storage })
 
 app.use('/se', express.static(path.join(__dirname, 'lib')));
 app.use('/res', express.static(path.join(__dirname, 'res')));
@@ -29,14 +30,23 @@ app.listen(port, () => {
     console.log(`editor-server start at localhost:${port}`);
 });
 
-app.post('/uploadImage', imageUploader.single('imageFile'), (req, res) => {
+app.post('/uploadImage', uploader.single('imageFile'), (req, res) => {
     res.json({
         uploadPath: path.join('res', req.file.filename)
     });
 });
 
-app.get('/import', (req, res) => {
-    childProcess.exec('');
+app.post('/getSerializedPbData', uploader.single('wordFile'), (req, res) => {
+    request({
+        url:'http://localhost:8080/import',
+        method: 'POST',
+        formData: {
+            file: fs.createReadStream(path.join(__dirname, 'res', 'imageTest.docx'))
+        }
+    }, function (error, res) {
+        console.log(error,response.body);
+        return;
+    });
 });
 
 app.get('/load', (req, res) => {
