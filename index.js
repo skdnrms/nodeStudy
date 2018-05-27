@@ -36,15 +36,15 @@ app.post('/uploadImage', uploader.single('imageFile'), (req, res) => {
     });
 });
 
-app.post('/getSerializedPbData', uploader.single('wordFile'), (req, res) => {
+app.post('/getSerializedPbData', uploader.single('docFile'), (req, res) => {
     request({
         url:'http://localhost:8080/import',
         method: 'POST',
         formData: {
-            file: fs.createReadStream(path.join(__dirname, 'res', 'imageTest.docx'))
+            file: fs.createReadStream(path.join(__dirname, 'res', req.file.filename))
         }
     }, function (error, res) {
-        console.log(error,response.body);
+        console.log('sucess!!', res);
         return;
     });
 });
