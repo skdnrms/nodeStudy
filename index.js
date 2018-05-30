@@ -37,15 +37,30 @@ app.post('/uploadImage', uploader.single('imageFile'), (req, res) => {
 });
 
 app.post('/getSerializedPbData', uploader.single('docFile'), (req, res) => {
-    request({
-        url:'http://localhost:8080/import',
-        method: 'POST',
+    const fileName = req.file.filename;
+    let rs = fs.createReadStream(path.join(__dirname, 'res', fileName));
+    let ws = fs.createWriteStream(path.join(__dirname, 'tmp', `${fileName}.zip`));
+    request.post('http://localhost:8080/import', {
         formData: {
-            file: fs.createReadStream(path.join(__dirname, 'res', req.file.filename))
+            file: rs
         }
-    }, function (error, res) {
-        console.log('sucess!!', res);
-        return;
+    }).pipe(ws);
+
+    ws.on('close', () => {
+        let serializedData = [];
+        const readStream = fs.createReadStream(path.join(__dirname, 'tmp', `${fileName}.zip`));
+        readStream.pipe(unzip.Extract({path: path.join(__dirname, 'tmp')})).on('close', () => {
+            fs.createReadStream(path.join(__dirname, 'tmp', 'document.word.pb'), {start: 16})
+            .pipe(zlib.createUnzip())
+            .on('data', (data) => {
+                for (let i = 0, len = data.length; i < len; i++) {
+                    serializedData.push(data[i] & 0xFF);
+                }
+            }).on('close', () => {
+                res.json({serializedData: serializedData});
+                res.end();
+            });
+        });
     });
 });
 
