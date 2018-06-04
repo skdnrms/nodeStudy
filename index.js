@@ -23,7 +23,6 @@ app.use('/se', express.static(path.join(__dirname, 'lib')));
 app.use('/res', express.static(path.join(__dirname, 'res')));
 
 app.get('/', (req, res) => {
-    console.log('test!!!');
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
@@ -66,7 +65,7 @@ app.post('/getSerializedPbData', uploader.single('docFile'), (req, res) => {
 });
 
 app.get('/load', (req, res) => {
-    request.get('http://synapeditor.iptime.org:8686/import2', {
+    request.get('http://localhost:8686/import2', {
         qs: {
             'url': 'https://calibre-ebook.com/downloads/demos/demo.docx'
         }
