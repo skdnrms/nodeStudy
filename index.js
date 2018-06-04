@@ -2,6 +2,7 @@ const request = require('request');
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const url = require('url')
 const fs = require('fs');
 const unzip = require('unzip');
 const zlib = require('zlib');
@@ -65,9 +66,31 @@ app.post('/getSerializedPbData', uploader.single('docFile'), (req, res) => {
 });
 
 app.get('/load', (req, res) => {
-    request.get('http://localhost:8686/import2', {
+    const downloadUrl = 'https://calibre-ebook.com/downloads/demos/demo.docx';
+    const fullFileName = path.basename(url.parse(downloadUrl).path);
+    const fileName = fullFileName.split('.')[0];
+    const ws = fs.createWriteStream(path.join(__dirname, 'tmp', `${fileName}.zip`));
+
+    request.get('http://synapeditor.iptime.org:8686/import2', {
         qs: {
-            'url': 'https://calibre-ebook.com/downloads/demos/demo.docx'
+            'url': downloadUrl
         }
+    }).pipe(ws);
+
+    ws.on('close', () => {
+        let serializedData = [];
+        const readStream = fs.createReadStream(path.join(__dirname, 'tmp', `${fileName}.zip`));
+        readStream.pipe(unzip.Extract({path: path.join(__dirname, 'tmp')})).on('close', () => {
+            fs.createReadStream(path.join(__dirname, 'tmp', 'document.word.pb'), {start: 16})
+            .pipe(zlib.createUnzip())
+            .on('data', (data) => {
+                for (let i = 0, len = data.length; i < len; i++) {
+                    serializedData.push(data[i] & 0xFF);
+                }
+            }).on('close', () => {
+                res.json({serializedData: serializedData});
+                res.end();
+            });
+        });
     });
 });
