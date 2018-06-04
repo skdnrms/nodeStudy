@@ -7,7 +7,7 @@ const unzip = require('unzip');
 const zlib = require('zlib');
 const app = express();
 const childProcess = require('child_process');
-const port = 8686;
+const port = 8787;
 
 const storage = multer.diskStorage({
     destination: function (req, file, callback) {
@@ -23,6 +23,7 @@ app.use('/se', express.static(path.join(__dirname, 'lib')));
 app.use('/res', express.static(path.join(__dirname, 'res')));
 
 app.get('/', (req, res) => {
+    console.log('test!!!');
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
@@ -40,7 +41,7 @@ app.post('/getSerializedPbData', uploader.single('docFile'), (req, res) => {
     const fileName = req.file.filename;
     let rs = fs.createReadStream(path.join(__dirname, 'res', fileName));
     let ws = fs.createWriteStream(path.join(__dirname, 'tmp', `${fileName}.zip`));
-    request.post('http://localhost:8080/import', {
+    request.post('http://synapeditor.iptime.org:8686/import', {
         formData: {
             file: rs
         }
