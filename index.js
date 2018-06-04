@@ -66,40 +66,9 @@ app.post('/getSerializedPbData', uploader.single('docFile'), (req, res) => {
 });
 
 app.get('/load', (req, res) => {
-    let serializedData = [];
-    let rs = fs.createReadStream(path.join(__dirname, 'res', 'test1.ndoc'));
-    let ws = fs.createWriteStream(path.join(__dirname, 'tmp', 'test1.zip'));
-
-    rs.on('data', (data) => {
-        const magicPos = data[2];
-        const magicNum = data[magicPos];
-        data[0] = 'P'.charCodeAt();
-        data[1] = 'K'.charCodeAt();
-        data[2] = 0x03;
-        data[3] = 0x04;
-
-        for(let i = 0; i < 60; i++) {
-            const index = i + 4;
-            data[index] = data[index] ^ magicNum;
+    request.get('http://synapeditor.iptime.org:8686/import2', {
+        qs: {
+            'url': 'https://calibre-ebook.com/downloads/demos/demo.docx'
         }
-
-        ws.write(data);
-        ws.end();
-    });
-
-    ws.on('close', () => {
-        fs.createReadStream(path.join(__dirname, 'tmp', 'test1.zip'))
-          .pipe(unzip.Extract({path: path.join(__dirname, 'tmp')})).on('close', () => {
-            fs.createReadStream(path.join(__dirname, 'tmp', 'document.word.pb'), {start: 16})
-              .pipe(zlib.createUnzip())
-              .on('data', (data) => {
-                for (let i = 0, len = data.length; i < len; i++) {
-                    serializedData.push(data[i] & 0xFF);
-                }
-            }).on('close', () => {
-                res.json({serializedData: serializedData});
-                res.end();
-            });
-        });
     });
 });
