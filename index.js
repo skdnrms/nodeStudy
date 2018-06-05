@@ -38,14 +38,13 @@ app.post('/uploadImage', uploader.single('imageFile'), (req, res) => {
 });
 
 app.post('/getSerializedPbData', uploader.single('docFile'), (req, res) => {
-    const fileName = req.file.filename;
-    let rs = fs.createReadStream(path.join(__dirname, 'res', fileName));
-    let ws = fs.createWriteStream(path.join(__dirname, 'tmp', `${fileName}.zip`));
-    request.post('http://synapeditor.iptime.org:8686/import', {
-        formData: {
-            file: rs
-        }
-    }).pipe(ws);
+    // url
+    const fullFileName = req.file.filename;
+    const fileName = fullFileName.split('.')[0];
+    const downloadUrl = `http://192.168.0.80:${port}/res/${fullFileName}`;
+    const ws = fs.createWriteStream(path.join(__dirname, 'tmp', `${fileName}.zip`));
+    console.log(downloadUrl);
+    request.get('http://synapeditor.iptime.org:8686/import2', {qs: {'url': downloadUrl}}).pipe(ws);
 
     ws.on('close', () => {
         let serializedData = [];
@@ -63,6 +62,33 @@ app.post('/getSerializedPbData', uploader.single('docFile'), (req, res) => {
             });
         });
     });
+
+    // // file stream
+    // const fileName = req.file.filename;
+    // let rs = fs.createReadStream(path.join(__dirname, 'res', fileName));
+    // let ws = fs.createWriteStream(path.join(__dirname, 'tmp', `${fileName}.zip`));
+    // request.post('http://synapeditor.iptime.org:8686/import', {
+    //     formData: {
+    //         file: rs
+    //     }
+    // }).pipe(ws);
+
+    // ws.on('close', () => {
+    //     let serializedData = [];
+    //     const readStream = fs.createReadStream(path.join(__dirname, 'tmp', `${fileName}.zip`));
+    //     readStream.pipe(unzip.Extract({path: path.join(__dirname, 'tmp')})).on('close', () => {
+    //         fs.createReadStream(path.join(__dirname, 'tmp', 'document.word.pb'), {start: 16})
+    //         .pipe(zlib.createUnzip())
+    //         .on('data', (data) => {
+    //             for (let i = 0, len = data.length; i < len; i++) {
+    //                 serializedData.push(data[i] & 0xFF);
+    //             }
+    //         }).on('close', () => {
+    //             res.json({serializedData: serializedData});
+    //             res.end();
+    //         });
+    //     });
+    // });
 });
 
 app.get('/load', (req, res) => {
@@ -71,11 +97,7 @@ app.get('/load', (req, res) => {
     const fileName = fullFileName.split('.')[0];
     const ws = fs.createWriteStream(path.join(__dirname, 'tmp', `${fileName}.zip`));
 
-    request.get('http://synapeditor.iptime.org:8686/import2', {
-        qs: {
-            'url': downloadUrl
-        }
-    }).pipe(ws);
+    request.get('http://synapeditor.iptime.org:8686/import2', {qs: {'url': downloadUrl}}).pipe(ws);
 
     ws.on('close', () => {
         let serializedData = [];
